@@ -39,7 +39,7 @@ pub fn App() -> impl IntoView {
                 opts.mode(RequestMode::Cors);
 
                 let url = "https://id.twitch.tv/oauth2/userinfo";
-                let request = Request::new_with_str_and_init(&url, &opts).unwrap();
+                let request = Request::new_with_str_and_init(url, &opts).unwrap();
                 request
                     .headers()
                     .set(
@@ -98,7 +98,7 @@ pub fn App() -> impl IntoView {
         })));
 
         client.set_on_close(Some(Box::new(|_evt| {
-            console_log(format!("Connection closed").as_str());
+            console_log("Connection closed");
         })));
 
         client.set_on_message(Some(Box::new(
@@ -122,9 +122,9 @@ pub fn App() -> impl IntoView {
                     let element = document().get_element_by_id("app").unwrap();
                     element.scroll_into_view_with_bool(false);
 
-                    if messages.get_untracked().len() > 14 {
+                    if messages.get_untracked().len() > 20 {
                         set_messages.update(|f| {
-                            (0..6).for_each(|_| {
+                            (0..9).for_each(|_| {
                                 f.pop_front();
                             });
                         });
@@ -156,6 +156,7 @@ pub fn App() -> impl IntoView {
         <div id="app">
             <Comments messages=messages />
         </div>
+
 
         <svg xmlns="http://www.w3.org/2000/svg" version="1.1">
         <defs>

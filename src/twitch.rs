@@ -1,6 +1,8 @@
 #![allow(unused)]
 
-#[derive(Default, Debug, Clone, PartialEq, Eq, Hash)]
+use leptos::*;
+
+#[derive(Default, Clone)]
 pub struct TwitchChatMessage {
     pub id: usize,
     pub badge_info: Option<String>,
@@ -30,7 +32,7 @@ pub struct TwitchChatMessage {
     // pub username: String,
     // pub message_type: String,
     // pub channel_name: String,
-    pub message_body: String,
+    pub message_body: Option<HtmlElement<leptos::html::Div>>,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -51,7 +53,6 @@ pub struct TwitchBadge {
     pub version: u32,
 }
 
-#[derive(Debug)]
 pub enum ChatTypeMessage {
     Message(TwitchChatMessage),
     Other(String),
@@ -114,8 +115,6 @@ pub fn parse_twitch_message(data: &String) -> ChatTypeMessage {
                                 let start = range[0].parse::<u32>().unwrap();
                                 let end = range[1].parse::<u32>().unwrap();
 
-                                println!("Emote ID: {}, Start: {}, End: {}", emote_id, start, end);
-
                                 emotes_out.push(TwitchEmote {
                                     emote_id: emote_id.to_owned(),
                                     range: vec![TwitchEmoteRange { start, end }],
@@ -131,7 +130,20 @@ pub fn parse_twitch_message(data: &String) -> ChatTypeMessage {
         }
 
         if let Some(last_space_index) = data.rfind(" :") {
-            message.message_body = data[last_space_index + 2..].to_string();
+            let mut msg = data[last_space_index + 2..].to_string();
+
+            let mut replacements = vec![];
+            for emote in &message.emotes {
+                replacements.push((emote.range[0].start as usize..emote.range[0].end as usize + 1, format!("<img src=\"https://static-cdn.jtvnw.net/emoticons/v2/{}/static/light/2.0\" />", emote.emote_id)));
+            }
+
+            replacements.sort_by(|a, b| b.0.start.cmp(&a.0.start));
+
+            for (range, replacement) in replacements {
+                msg.replace_range(range, replacement.as_str());
+            }
+
+            message.message_body = Some(view! { <div inner_html=msg /> });
         }
 
         unsafe {
