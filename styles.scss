@@ -30,17 +30,19 @@ $easeInQuint: cubic-bezier(0.64, 0, 0.78, 0);
 
 #app {
     display: flex;
+    position: relative;
     justify-content: center;
     align-items: flex-end;
     flex-direction: column;
     padding-bottom: 3rem;
     // height: 100vh;
+    max-width: 850px;
 }
 
 .dialogue {
     position: relative;
     display: flex;
-    // max-height: math.div(1, 2);
+    max-height: math.div(1, 2);
     min-height: 150px;
     min-width: 95%;
     max-width: 95%;
