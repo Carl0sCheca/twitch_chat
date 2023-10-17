@@ -23,7 +23,7 @@ pub fn App() -> impl IntoView {
         | crate::url_query::Query::Values(
             QueryParams { token: None, .. } | QueryParams { channel: None, .. },
         ) => {
-            console_error("You have to set a channel, token and username");
+            console_error("You have to set a channel and token");
             std::process::exit(1)
         }
         crate::url_query::Query::Values(query_params) => query_params,
