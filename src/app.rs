@@ -86,7 +86,7 @@ pub fn App() -> impl IntoView {
                 let element = document().get_element_by_id("app").unwrap();
                 element.scroll_into_view_with_bool(false);
 
-                if messages.get_untracked().len() > 8 {
+                if messages.get_untracked().len() - 6 > 8 {
                     set_messages.update(|f| {
                         (0..6).for_each(|_| {
                             f.pop_front();
