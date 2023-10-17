@@ -117,7 +117,7 @@ pub fn App() -> impl IntoView {
                 // console_log(format!("New Message: {}", &msg).as_str());
 
                 if let ChatTypeMessage::Message(twitch_message) = twitch_msg {
-                    set_messages.update(|f| f.push_back(twitch_message));
+                    set_messages.update(|f| f.push_front(twitch_message));
 
                     let element = document().get_element_by_id("app").unwrap();
                     element.scroll_into_view_with_bool(false);
@@ -125,20 +125,9 @@ pub fn App() -> impl IntoView {
                     if messages.get_untracked().len() > 20 {
                         set_messages.update(|f| {
                             (0..9).for_each(|_| {
-                                f.pop_front();
+                                f.pop_back();
                             });
                         });
-                    } else {
-                        // set_timeout(
-                        //     move || {
-                        //         if messages.get().len() > 0 {
-                        //             set_messages.update(|f| {
-                        //                 f.pop_front();
-                        //             });
-                        //         }
-                        //     },
-                        //     Duration::from_secs(10),
-                        // );
                     }
                 }
             },
@@ -157,20 +146,14 @@ pub fn App() -> impl IntoView {
             <Comments messages=messages />
         </div>
 
-
         <svg xmlns="http://www.w3.org/2000/svg" version="1.1">
-        <defs>
-            <filter id="old-goo">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
-            <feBlend in="SourceGraphic" in2="goo" />
-            </filter>
-            <filter id="fancy-goo">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" />
-            <feComposite in="SourceGraphic" in2="goo" operator="atop" />
-            </filter>
-        </defs>
+            <defs>
+                <filter id="fancy-goo">
+                <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
+                <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="goo" />
+                <feComposite in="SourceGraphic" in2="goo" operator="atop" />
+                </filter>
+            </defs>
         </svg>
     }
 }
