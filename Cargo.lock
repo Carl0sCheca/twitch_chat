@@ -800,7 +800,7 @@ dependencies = [
  "rustc-hash",
  "self_cell",
  "serde",
- "serde-wasm-bindgen",
+ "serde-wasm-bindgen 0.5.0",
  "serde_json",
  "slotmap",
  "thiserror",
@@ -1327,6 +1327,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-wasm-bindgen"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "30c9933e5689bd420dc6c87b7a1835701810cbc10cd86a26e4da45b73e6b1d78"
+dependencies = [
+ "js-sys",
+ "serde",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.189"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1653,6 +1664,10 @@ name = "twitch-chat"
 version = "0.1.0"
 dependencies = [
  "leptos",
+ "serde",
+ "serde-wasm-bindgen 0.6.0",
+ "serde_json",
+ "wasm-bindgen-futures",
  "wasm-sockets",
  "web-sys",
 ]
