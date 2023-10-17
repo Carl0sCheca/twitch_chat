@@ -14,9 +14,7 @@ pub fn Comments(messages: ReadSignal<VecDeque<TwitchChatMessage>>) -> impl IntoV
                     <div class="dialogue-blobs">
                         <div class="dialogue-blob-top"></div>
                         <div class="dialogue-blob-bottom"></div>
-                        <div class="dialogue-text">
-                            {item.message_body}
-                        </div>
+                        <div class="dialogue-text" inner_html=item.message_body />
                     </div>
                     <div class="dialogue-character-wrap">
                         <div class="dialogue-character" style={format!("background-color:{}", item.color.unwrap_or("".to_owned()))}>

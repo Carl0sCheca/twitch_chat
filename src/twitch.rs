@@ -32,7 +32,7 @@ pub struct TwitchChatMessage {
     // pub username: String,
     // pub message_type: String,
     // pub channel_name: String,
-    pub message_body: Option<HtmlElement<leptos::html::Div>>,
+    pub message_body: String,
 }
 
 #[derive(Default, Debug, Clone, PartialEq, Eq, Hash)]
@@ -143,7 +143,7 @@ pub fn parse_twitch_message(data: &String) -> ChatTypeMessage {
                 msg.replace_range(range, replacement.as_str());
             }
 
-            message.message_body = Some(view! { <div inner_html=msg /> });
+            message.message_body = msg;
         }
 
         unsafe {
