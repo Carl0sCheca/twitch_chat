@@ -15,6 +15,14 @@ use web_sys::{Request, RequestInit, RequestMode, Response};
 pub fn App() -> impl IntoView {
     let (messages, set_messages) = create_signal(VecDeque::new());
 
+    let hash = crate::url_hash::decode_request(window());
+    match hash {
+        crate::url_hash::Hash::Empty => (),
+        crate::url_hash::Hash::Value(hash) => {
+            return view! {"" <div>{hash}</div> };
+        }
+    }
+
     console_log("Creating connection");
     let params = crate::url_query::decode_request(window());
 

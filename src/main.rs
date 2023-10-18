@@ -1,6 +1,7 @@
 mod app;
 mod comments;
 mod twitch;
+mod url_hash;
 mod url_query;
 
 use app::*;
