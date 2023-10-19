@@ -13,6 +13,7 @@ pub struct TwitchChatMessage {
     pub emotes: Vec<TwitchEmote>,
     pub first_msg: u8,
     pub mod_flag: u8,
+    pub user_id: u32,
     // pub flags: String,
     // pub id: String,
     // pub reply_parent_display_name: Option<String>,
@@ -27,7 +28,6 @@ pub struct TwitchChatMessage {
     // pub subscriber: u8,
     // pub tmi_sent_ts: u64,
     // pub turbo: u8,
-    // pub user_id: u32,
     // pub user_type: String,
     // pub username: String,
     // pub message_type: String,
@@ -60,7 +60,7 @@ pub enum ChatTypeMessage {
 
 pub static mut VALUE: usize = 0;
 
-pub fn parse_twitch_message(data: &String) -> ChatTypeMessage {
+pub fn parse_twitch_message(data: &String, channel_id: String) -> ChatTypeMessage {
     let is_message = if let Some(first_char) = data.chars().next() {
         first_char == '@'
     } else {
@@ -124,13 +124,15 @@ pub fn parse_twitch_message(data: &String) -> ChatTypeMessage {
                         message.emotes = emotes_out;
                     }
                     "mod" => message.mod_flag = value.parse::<u8>().unwrap_or(0),
+                    "user-id" => message.user_id = value.parse::<u32>().unwrap_or(0),
                     _ => {}
                 }
             }
         }
 
-        if let Some(last_space_index) = data.rfind(" :") {
-            let mut msg = data[last_space_index + 2..].to_string();
+        if let Some(last_space_index) = data.rfind(&format!("PRIVMSG #{} :", channel_id)) {
+            let mut msg =
+                data[last_space_index + format!("PRIVMSG #{} :", channel_id).len()..].to_string();
 
             let mut replacements = vec![];
             for emote in &message.emotes {

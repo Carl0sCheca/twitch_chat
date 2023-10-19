@@ -1,4 +1,5 @@
 mod app;
+mod betterttv;
 mod comments;
 mod twitch;
 mod url_hash;

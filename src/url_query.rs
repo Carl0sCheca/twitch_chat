@@ -2,7 +2,6 @@
 pub struct QueryParams {
     pub channel: Option<String>,
     pub token: Option<String>,
-    pub username: Option<String>,
 }
 
 #[derive(Debug)]
@@ -34,7 +33,6 @@ pub fn decode_request(window: web_sys::Window) -> Query {
                     match key {
                         "channel" => params.channel = Some(value.to_string()),
                         "token" => params.token = Some(value.to_string()),
-                        "username" => params.username = Some(value.to_string()),
                         _ => {}
                     }
                 }

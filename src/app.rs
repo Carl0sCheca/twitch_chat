@@ -1,4 +1,8 @@
-use std::{collections::VecDeque, time::Duration};
+use std::{
+    collections::VecDeque,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 
 use crate::comments::*;
 use crate::twitch::ChatTypeMessage;
@@ -10,6 +14,8 @@ use leptos::{
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
+
+const CLIENT_ID: &str = "gyy1g5ph81fi3ytmen3uf59oi2xgk9";
 
 #[component]
 pub fn App() -> impl IntoView {
@@ -38,35 +44,40 @@ pub fn App() -> impl IntoView {
     };
 
     spawn_local(async move {
-        let username = {
-            if let Some(username) = &query_params.username {
-                username.clone()
-            } else {
-                let mut opts = RequestInit::new();
-                opts.method("GET");
-                opts.mode(RequestMode::Cors);
+        let (username, user_id) = {
+            let mut opts = RequestInit::new();
+            opts.method("GET");
+            opts.mode(RequestMode::Cors);
 
-                let url = "https://id.twitch.tv/oauth2/userinfo";
-                let request = Request::new_with_str_and_init(url, &opts).unwrap();
-                request
-                    .headers()
-                    .set(
-                        "Authorization",
-                        format!("Bearer {}", query_params.token.as_ref().unwrap()).as_str(),
-                    )
-                    .unwrap();
-                let window = web_sys::window().unwrap();
-                let resp_value = JsFuture::from(window.fetch_with_request(&request))
-                    .await
-                    .unwrap();
-                let resp: Response = resp_value.dyn_into().unwrap();
-                let json = JsFuture::from(resp.json().unwrap()).await.unwrap();
-                serde_wasm_bindgen::from_value::<serde_json::Value>(json).unwrap()
-                    ["preferred_username"]
-                    .as_str()
-                    .unwrap_or("")
-                    .to_owned()
-            }
+            let url = &format!(
+                "https://api.twitch.tv/helix/users?login={}",
+                query_params.channel.as_ref().unwrap().clone()
+            );
+            let request = Request::new_with_str_and_init(url, &opts).unwrap();
+            request
+                .headers()
+                .set(
+                    "Authorization",
+                    format!("Bearer {}", query_params.token.as_ref().unwrap()).as_str(),
+                )
+                .unwrap();
+            request.headers().set("Client-Id", CLIENT_ID).unwrap();
+
+            let resp_value = JsFuture::from(window().fetch_with_request(&request))
+                .await
+                .unwrap();
+            let resp: Response = resp_value.dyn_into().unwrap();
+            let json = JsFuture::from(resp.json().unwrap()).await.unwrap();
+
+            let value = serde_wasm_bindgen::from_value::<serde_json::Value>(json).unwrap();
+            let value = value["data"].as_array().unwrap();
+            let value = value[0].clone();
+
+            let username = value["display_name"].as_str().unwrap_or("").to_owned();
+
+            let user_id = value["id"].as_str().unwrap_or("").to_owned();
+
+            (username, user_id)
         };
 
         if username.is_empty() {
@@ -81,18 +92,13 @@ pub fn App() -> impl IntoView {
             console_log(format!("{:#?}", error).as_str());
         })));
 
+        let token = query_params.token.as_ref().unwrap().clone();
         let channel = query_params.channel.as_ref().unwrap().clone();
         client.set_on_connection(Some(Box::new(move |client: &wasm_sockets::EventClient| {
             // console_log(format!("{:#?}", client.status).as_str());
             // console_log(format!("Sending message...").as_str());
             client
-                .send_string(
-                    format!(
-                        "PASS oauth:{}",
-                        query_params.token.as_ref().unwrap().as_str()
-                    )
-                    .as_str(),
-                )
+                .send_string(format!("PASS oauth:{}", token).as_str())
                 .unwrap();
             client
                 .send_string("CAP REQ :twitch.tv/commands twitch.tv/tags")
@@ -109,35 +115,51 @@ pub fn App() -> impl IntoView {
             console_log("Connection closed");
         })));
 
+        let betterttv = Arc::new(Mutex::new(crate::betterttv::BetterTTV::default()));
+        betterttv.lock().unwrap().load_global_emotes().await;
+        betterttv.lock().unwrap().load_shared_emotes(user_id).await;
+
         client.set_on_message(Some(Box::new(
             move |_client: &wasm_sockets::EventClient, message: wasm_sockets::Message| {
-                let msg = match message {
-                    wasm_sockets::Message::Text(text) => text,
-                    _ => "".to_owned(),
-                };
+                let channel = query_params.channel.as_ref().unwrap().clone();
+                let betterttv = betterttv.clone();
+                spawn_local(async move {
+                    let msg = match message {
+                        wasm_sockets::Message::Text(text) => text,
+                        _ => "".to_owned(),
+                    };
 
-                if msg.is_empty() || !msg.contains("PRIVMSG") {
-                    return;
-                }
-
-                let twitch_msg = crate::twitch::parse_twitch_message(&msg);
-
-                // console_log(format!("New Message: {}", &msg).as_str());
-
-                if let ChatTypeMessage::Message(twitch_message) = twitch_msg {
-                    set_messages.update(|f| f.push_front(twitch_message));
-
-                    let element = document().get_element_by_id("app").unwrap();
-                    element.scroll_into_view_with_bool(false);
-
-                    if messages.get_untracked().len() > 20 {
-                        set_messages.update(|f| {
-                            (0..9).for_each(|_| {
-                                f.pop_back();
-                            });
-                        });
+                    if msg.is_empty() || !msg.contains("PRIVMSG") {
+                        return;
                     }
-                }
+                    // console_log(format!("New Message: {}", &msg).as_str());
+
+                    let twitch_msg: ChatTypeMessage =
+                        crate::twitch::parse_twitch_message(&msg, channel);
+
+                    if let ChatTypeMessage::Message(mut twitch_message) = twitch_msg {
+                        let message = betterttv
+                            .lock()
+                            .unwrap()
+                            .parse_emotes(twitch_message.message_body)
+                            .await;
+
+                        twitch_message.message_body = message;
+
+                        set_messages.update(|f| f.push_front(twitch_message));
+
+                        let element = document().get_element_by_id("app").unwrap();
+                        element.scroll_into_view_with_bool(false);
+
+                        if messages.get_untracked().len() > 20 {
+                            set_messages.update(|f| {
+                                (0..9).for_each(|_| {
+                                    f.pop_back();
+                                });
+                            });
+                        }
+                    }
+                });
             },
         )));
 
