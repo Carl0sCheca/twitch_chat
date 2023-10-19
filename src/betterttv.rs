@@ -1,4 +1,6 @@
-use leptos::wasm_bindgen::JsCast;
+use leptos::wasm_bindgen::prelude::*;
+use leptos::*;
+use leptos::{leptos_dom::logging::console_log, wasm_bindgen::JsCast};
 use serde::Deserialize;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
@@ -52,6 +54,11 @@ impl BetterTTV {
             .await
             .unwrap();
         let resp: Response = resp_value.dyn_into().unwrap();
+
+        if resp.status() != 200 {
+            return;
+        }
+
         let json = JsFuture::from(resp.json().unwrap()).await.unwrap();
 
         #[derive(Deserialize)]
