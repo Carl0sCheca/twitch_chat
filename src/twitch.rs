@@ -60,6 +60,29 @@ pub enum ChatTypeMessage {
 
 pub static mut VALUE: usize = 0;
 
+pub fn parse_emotes(message: String, emotes: &Vec<TwitchEmote>) -> String {
+    let mut message = message;
+
+    let mut replacements = vec![];
+    for emote in emotes {
+        replacements.push((
+            emote.range[0].start as usize..emote.range[0].end as usize + 1,
+            format!(
+                "<img src=\"https://static-cdn.jtvnw.net/emoticons/v2/{}/static/light/2.0\" />",
+                emote.emote_id
+            ),
+        ));
+    }
+
+    replacements.sort_by(|a, b| b.0.start.cmp(&a.0.start));
+
+    for (range, replacement) in replacements {
+        message.replace_range(range, replacement.as_str());
+    }
+
+    message
+}
+
 pub fn parse_twitch_message(data: &String, channel_id: String) -> ChatTypeMessage {
     let is_message = if let Some(first_char) = data.chars().next() {
         first_char == '@'
@@ -133,17 +156,6 @@ pub fn parse_twitch_message(data: &String, channel_id: String) -> ChatTypeMessag
         if let Some(last_space_index) = data.rfind(&format!("PRIVMSG #{} :", channel_id)) {
             let mut msg =
                 data[last_space_index + format!("PRIVMSG #{} :", channel_id).len()..].to_string();
-
-            let mut replacements = vec![];
-            for emote in &message.emotes {
-                replacements.push((emote.range[0].start as usize..emote.range[0].end as usize + 1, format!("<img src=\"https://static-cdn.jtvnw.net/emoticons/v2/{}/static/light/2.0\" />", emote.emote_id)));
-            }
-
-            replacements.sort_by(|a, b| b.0.start.cmp(&a.0.start));
-
-            for (range, replacement) in replacements {
-                msg.replace_range(range, replacement.as_str());
-            }
 
             message.message_body = msg;
         }

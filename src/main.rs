@@ -1,6 +1,7 @@
 mod app;
 mod betterttv;
 mod comments;
+mod seventv;
 mod twitch;
 mod url_hash;
 mod url_query;

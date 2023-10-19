@@ -22,11 +22,8 @@ pub fn decode_request(window: web_sys::Window) -> Hash {
                 let key = kv[0];
                 let value = kv[1];
 
-                if !value.is_empty() {
-                    match key {
-                        "access_token" => access_token = value,
-                        _ => {}
-                    }
+                if !value.is_empty() && key == "access_token" {
+                    access_token = value;
                 }
             }
         }

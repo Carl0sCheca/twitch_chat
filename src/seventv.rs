@@ -6,27 +6,26 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
 #[derive(Default, Debug, Clone)]
-pub struct BetterTTV {
-    global_emotes: Vec<BetterTTVEmote>,
-    shared_emotes: Vec<BetterTTVEmote>,
-    combined_emotes: Vec<BetterTTVEmote>,
+pub struct SevenTv {
+    global_emotes: Vec<SevenTvEmote>,
+    shared_emotes: Vec<SevenTvEmote>,
+    combined_emotes: Vec<SevenTvEmote>,
     regex_precompiled: Option<Regex>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-pub struct BetterTTVEmote {
+pub struct SevenTvEmote {
     pub id: String,
-    pub code: String,
-    pub animated: bool,
+    pub name: String,
 }
 
-impl BetterTTV {
+impl SevenTv {
     pub async fn load_global_emotes(&mut self) {
         let mut opts = RequestInit::new();
         opts.method("GET");
         opts.mode(RequestMode::Cors);
 
-        let url = "https://api.betterttv.net/3/cached/emotes/global";
+        let url = "https://api.7tv.app/v2/emotes/global";
         let request = Request::new_with_str_and_init(url, &opts).unwrap();
         let window = web_sys::window().unwrap();
         let resp_value = JsFuture::from(window.fetch_with_request(&request))
@@ -34,7 +33,7 @@ impl BetterTTV {
             .unwrap();
         let resp: Response = resp_value.dyn_into().unwrap();
         let json = JsFuture::from(resp.json().unwrap()).await.unwrap();
-        let emotes = serde_wasm_bindgen::from_value::<Vec<BetterTTVEmote>>(json).unwrap();
+        let emotes = serde_wasm_bindgen::from_value::<Vec<SevenTvEmote>>(json).unwrap();
 
         emotes.iter().for_each(|emote| {
             self.global_emotes.push(emote.clone());
@@ -46,10 +45,7 @@ impl BetterTTV {
         opts.method("GET");
         opts.mode(RequestMode::Cors);
 
-        let url = &format!(
-            "https://api.betterttv.net/3/cached/users/twitch/{}",
-            user_id
-        );
+        let url = &format!("https://api.7tv.app/v2/users/{}/emotes", user_id);
         let request = Request::new_with_str_and_init(url, &opts).unwrap();
         let window = web_sys::window().unwrap();
         let resp_value = JsFuture::from(window.fetch_with_request(&request))
@@ -63,15 +59,9 @@ impl BetterTTV {
 
         let json = JsFuture::from(resp.json().unwrap()).await.unwrap();
 
-        #[derive(Deserialize)]
-        #[serde(rename_all = "camelCase")]
-        struct SharedEmotes {
-            shared_emotes: Vec<BetterTTVEmote>,
-        }
+        let emotes = serde_wasm_bindgen::from_value::<Vec<SevenTvEmote>>(json).unwrap();
 
-        let emotes = serde_wasm_bindgen::from_value::<SharedEmotes>(json).unwrap();
-
-        emotes.shared_emotes.iter().for_each(|emote| {
+        emotes.iter().for_each(|emote| {
             self.shared_emotes.push(emote.clone());
         });
     }
@@ -84,7 +74,7 @@ impl BetterTTV {
             r"\b({})\b",
             emotes
                 .iter()
-                .map(|emote| regex::escape(&emote.code))
+                .map(|emote| regex::escape(&emote.name))
                 .collect::<Vec<_>>()
                 .join("|")
         ))
@@ -95,21 +85,20 @@ impl BetterTTV {
     }
 
     pub fn parse_emotes(&self, message: String) -> String {
-        self.regex_precompiled
-            .as_ref()
-            .unwrap()
-            .replace_all(&message, |caps: &Captures| {
-                let matched_emote = &caps[0]; // Use caps[0] to access the matched emote name
-                let emote = self
-                    .combined_emotes
-                    .iter()
-                    .find(|emote| emote.code == matched_emote)
-                    .unwrap();
-                format!(
-                    "<img src=\"https://cdn.betterttv.net/emote/{}/2x\" />",
-                    emote.id
-                )
-            })
-            .into_owned()
+        let re = self.regex_precompiled.as_ref().unwrap();
+
+        re.replace_all(&message, |caps: &Captures| {
+            let matched_emote = &caps[0]; // Use caps[0] to access the matched emote name
+            let emote = self
+                .combined_emotes
+                .iter()
+                .find(|emote| emote.name == matched_emote)
+                .unwrap();
+            format!(
+                "<img src=\"https://cdn.7tv.app/emote/{}/2x.webp\" />",
+                emote.id
+            )
+        })
+        .into_owned()
     }
 }
