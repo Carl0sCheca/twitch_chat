@@ -1,6 +1,7 @@
 mod app;
 mod betterttv;
 mod comments;
+mod emotes;
 mod seventv;
 mod twitch;
 mod url_hash;

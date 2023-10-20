@@ -1,16 +1,12 @@
 use leptos::wasm_bindgen::JsCast;
 use leptos::*;
-use regex::{Captures, Regex};
 use serde::Deserialize;
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
 #[derive(Default, Debug, Clone)]
 pub struct BetterTTV {
-    global_emotes: Vec<BetterTTVEmote>,
-    shared_emotes: Vec<BetterTTVEmote>,
-    combined_emotes: Vec<BetterTTVEmote>,
-    regex_precompiled: Option<Regex>,
+    pub emotes: Vec<BetterTTVEmote>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -37,7 +33,7 @@ impl BetterTTV {
         let emotes = serde_wasm_bindgen::from_value::<Vec<BetterTTVEmote>>(json).unwrap();
 
         emotes.iter().for_each(|emote| {
-            self.global_emotes.push(emote.clone());
+            self.emotes.push(emote.clone());
         });
     }
 
@@ -72,44 +68,7 @@ impl BetterTTV {
         let emotes = serde_wasm_bindgen::from_value::<SharedEmotes>(json).unwrap();
 
         emotes.shared_emotes.iter().for_each(|emote| {
-            self.shared_emotes.push(emote.clone());
+            self.emotes.push(emote.clone());
         });
-    }
-
-    pub fn precompile_regex(&mut self) {
-        let mut emotes = vec![];
-        emotes.extend(self.global_emotes.clone());
-        emotes.extend(self.shared_emotes.clone());
-        let re = Regex::new(&format!(
-            r"\b({})\b",
-            emotes
-                .iter()
-                .map(|emote| regex::escape(&emote.code))
-                .collect::<Vec<_>>()
-                .join("|")
-        ))
-        .unwrap();
-
-        self.regex_precompiled = Some(re);
-        self.combined_emotes = emotes;
-    }
-
-    pub fn parse_emotes(&self, message: String) -> String {
-        self.regex_precompiled
-            .as_ref()
-            .unwrap()
-            .replace_all(&message, |caps: &Captures| {
-                let matched_emote = &caps[0]; // Use caps[0] to access the matched emote name
-                let emote = self
-                    .combined_emotes
-                    .iter()
-                    .find(|emote| emote.code == matched_emote)
-                    .unwrap();
-                format!(
-                    "<img src=\"https://cdn.betterttv.net/emote/{}/2x\" />",
-                    emote.id
-                )
-            })
-            .into_owned()
     }
 }

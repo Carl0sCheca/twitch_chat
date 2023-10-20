@@ -1,8 +1,4 @@
-use std::{
-    collections::VecDeque,
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{collections::VecDeque, sync::Arc, time::Duration};
 
 use crate::comments::*;
 use crate::twitch::ChatTypeMessage;
@@ -118,20 +114,42 @@ pub fn App() -> impl IntoView {
         let mut betterttv = crate::betterttv::BetterTTV::default();
         betterttv.load_global_emotes().await;
         betterttv.load_shared_emotes(user_id.clone()).await;
-        betterttv.precompile_regex();
-        let betterttv = Arc::new(Mutex::new(betterttv));
 
         let mut seventv = crate::seventv::SevenTv::default();
         seventv.load_global_emotes().await;
         seventv.load_shared_emotes(user_id.clone()).await;
-        seventv.precompile_regex();
-        let seventv = Arc::new(Mutex::new(seventv));
+
+        let mut emotes = crate::emotes::Emotes::default();
+        emotes.load_emotes(
+            betterttv
+                .emotes
+                .iter()
+                .map(|f| crate::emotes::Emote {
+                    id: f.id.clone(),
+                    code: f.code.clone(),
+                    provider: crate::emotes::Provider::BetterTTV,
+                })
+                .collect(),
+        );
+        emotes.load_emotes(
+            seventv
+                .emotes
+                .iter()
+                .map(|f| crate::emotes::Emote {
+                    id: f.id.clone(),
+                    code: f.name.clone(),
+                    provider: crate::emotes::Provider::SevenTV,
+                })
+                .collect(),
+        );
+        emotes.precompile_emotes();
+
+        let emotes = Arc::new(emotes);
 
         client.set_on_message(Some(Box::new(
             move |_client: &wasm_sockets::EventClient, message: wasm_sockets::Message| {
                 let channel = query_params.channel.as_ref().unwrap().clone();
-                let betterttv = betterttv.clone();
-                let seventv = seventv.clone();
+                let emotes = emotes.clone();
                 spawn_local(async move {
                     let msg = match message {
                         wasm_sockets::Message::Text(text) => text,
@@ -147,13 +165,11 @@ pub fn App() -> impl IntoView {
                         crate::twitch::parse_twitch_message(&msg, channel);
 
                     if let ChatTypeMessage::Message(mut twitch_message) = twitch_msg {
-                        let message = betterttv
-                            .lock()
-                            .unwrap()
-                            .parse_emotes(twitch_message.message_body);
-
-                        let message = seventv.lock().unwrap().parse_emotes(message);
-                        let message = crate::twitch::parse_emotes(message, &twitch_message.emotes);
+                        let message = crate::twitch::parse_emotes(
+                            twitch_message.message_body,
+                            &twitch_message.emotes,
+                        );
+                        let message = emotes.parse_emotes(message);
 
                         twitch_message.message_body = message;
 
